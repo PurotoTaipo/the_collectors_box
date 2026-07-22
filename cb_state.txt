@@ -14,13 +14,15 @@ Wir erstellen eine Datenbank für sammelbare Elemente. Dafür brauchen wir die K
 	- publisher
 * Games: GameItem
 * Bücher: BookItem
+* Figuren: FigureItem
 
 Für alle gemeinsam gilt an Spalten:
-* title
+* title (wird bei FigureItem als "Name" ausgegeben, in der DB aber wie gehabt unter title gespeichert)
 * other_titles [array of array aufgeteilt nach Ländern/Sprachen]) - {"de":["Der Spatz","Spatz"],"en":["Sparrow"]}
 * year
 * connections (Items können mit anderen Items verknüpft sein mit einem Typ ["sequel", "prequel", "crossover", ...])
 * changelog
+* genre (ein array, jedes Element kann mehr als ein Genre haben - und jeder Typ hat seine eigene Liste an Genres)
 
 Schließlich braucht man noch eine Tabelle für die Sachen zum Verknüpfen mit dem User, also eine 1-zu-n Tabelle UserToItem mit Spalten:
 * user_id
@@ -30,6 +32,9 @@ Schließlich braucht man noch eine Tabelle für die Sachen zum Verknüpfen mit d
 * volumes (ein Array der Nummern, die man dann besitzt)
 * volume_offset (bei Reihen, die woanders weitergehen. Z.B. One Punch man 1-30 (bei verlag KaZE), dann One Punch Man 31-47 (bei Verlag Crunchyroll - Wären dann hier ggf zwei eigene Elemente (weil der Verlag wechselt)), default immer NULL
 * shop_id (wo gekauft -> geht auf eigene Tabelle mit shops, die bestehen aus Name & Icon)
+* visible (einstellung von 0 (nur für user sichtbar) zu 1 (für alle sichtbar) - wichtig beim Teilen
+* rating (haupt rating für das Objekt)
+* rating_details (json mit detail ratings zu visuals, sound, story, etc.)
 * created (datetime)
 * changed (datetime)
 
@@ -46,11 +51,24 @@ Weitere Unterseiten, die von den einzelnen Typen ausgehen:
 Actor-Liste, Studio-Liste, Director-Liste, Artist-Liste, ...
 Die zeigen dann auch eine Filterbare (aber weniger Filter) Liste der jeweiligen Untertabelle an. Bei den Actors kann man dann auch noch ein Bild hinzufügen gegebenenfalls.
 
-Weitere Unterseite "Todo/Shoppinglist"
+Weitere Unterseite "Todo/Shoppinglist" auch pro Typ
 Gibt es bei einem item einen volume_count und steht das Item nicht auf "finished" oder "aborded", taucht es in der Todo-Liste auf. Hier gibt es dann auch noch Gruppierungen und bestimmte Eigenenschaften.
+
+Weitere Unterseite "Onway" auch pro Typ, aber auch eine globale Version über alle Typen
+Hier sollen alle Elemente seiner CollectableItems angezeigt werden, welche Unterwegs sind, gruppiert nach shop_id.
+
+Weitere Unterseite "Wishlist" auch pro Typ
+Hier sollen alle Elemente angezeigt werden, welche den status auf "On Wishlist" stehen. Sollen auch filterbar sein.
+Diese Seite soll dann auch teilbar sein - also mit einem bestimmten erstellten Hash aufrufbar, wo aber dann nur die Elemente angezeigt werden, welche für alle sichtbar sind)
+
+Weitere Unterseite "Statistics" auch pro Typ
+Hier werden verschiedene Balkendiagramme angezeigt wo die Anzahl der Elemente gruppiert gezielt werden nach:
+- year
+- genre + genre-mix (Gewisse Kombinationen aus Genres kommen häufig vor)
+- country (nicht für jeden Typ verfügbar)
 
 Wie kommen ganz neue Elemente in die Datenbank?
 Da Crawling teilweise zu schwierig ist (wegen Cloudflare), wird es Browser-Plugins geben, die einfach den aktuellen Inhalt einer HTMl-Webseite (Film-Seite, Anime-Seite, Serien-Seite, etc.) auf eine Target-Seite kopiert. Dort wird das HTML erst einmal in ein Form gepackt mit Auswahlmöglichkeit für den Typ des Inhalts (Game, Film, Anime, etc.) und beim absenden wird es erst entsprechend geparst.
 Dafür brauchen wir einen HTMl-Parser, der nach bestimmten Mustern Inhalte rausparst. Hier wäre ggf. eine eigene Klasse gut, die wiederum für jeden Typ Unterklassen haben GameParser, FilmParser, etc., die wiederum von der Hauptklasse erben. Hier soll dann ein Fehler ausgegeben werden, wenn Dinge nicht gefunden werden (z.B. der Titel) oder nicht geparst werden kann. Wenn Titel und Jahr gefunden wurde, wird in der Datenbank erst einmal geschaut, ob es das nicht schon gibt und dann wird nachgefragt, ob der Titel A) Trotzdem neu angelegt werden soll, B) Überschrieben werden soll oder C) Abbrechen
 
-Gestartet werden muss zuerst mit den Parsern.
+Außerdem wird eine öffentliche Index-Seite und eine Anmelde-Seite benötigt, um einen Account zu erstellen. Die Anmelde-eite muss aber versteckt sein und nur mit einem Passwort zugänglich sein (damit nur zugelassene User sich anmelden können).
