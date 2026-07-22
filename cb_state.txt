@@ -1,0 +1,56 @@
+Konzept:
+
+Wir erstellen eine Datenbank für sammelbare Elemente. Dafür brauchen wir die Klasse CollectableItem. Davon leiten sich dann diverse Elemente ab für verschiedene Elemente:
+* Filme: MovieItem, muss dann Spalten haben wie
+	- actors (die dann auch auf eine andere Tabelle verlinken, müsste dann ein Tupel sein für Rolle und Actor)
+	- director (ebenfalls ein array von mehreren directors auf eine eigene director-Tabelle)
+	- studio (ebenfalls ein array von mehreren studios auf eine eigene studio-Tabelle)
+* Animes: AnimeItem
+* Serien: SeriesItem, muss dann Spalten haben wie:
+	- season
+* Mangas: MangaItem, muss dann Spalten haben wie:
+	- artist
+	- writer
+	- publisher
+* Games: GameItem
+* Bücher: BookItem
+
+Für alle gemeinsam gilt an Spalten:
+* title
+* other_titles [array of array aufgeteilt nach Ländern/Sprachen]) - {"de":["Der Spatz","Spatz"],"en":["Sparrow"]}
+* year
+* connections (Items können mit anderen Items verknüpft sein mit einem Typ ["sequel", "prequel", "crossover", ...])
+* changelog
+
+Schließlich braucht man noch eine Tabelle für die Sachen zum Verknüpfen mit dem User, also eine 1-zu-n Tabelle UserToItem mit Spalten:
+* user_id
+* item_id
+* status (On Wishlist, Ordered/Onway, On Shelf, Started, Finished, Aborded)
+* volume_count (bei Elemente, die mehr als ein Stück haben - wie z.B. bei Mangas oder Animes oder Serien)
+* volumes (ein Array der Nummern, die man dann besitzt)
+* volume_offset (bei Reihen, die woanders weitergehen. Z.B. One Punch man 1-30 (bei verlag KaZE), dann One Punch Man 31-47 (bei Verlag Crunchyroll - Wären dann hier ggf zwei eigene Elemente (weil der Verlag wechselt)), default immer NULL
+* shop_id (wo gekauft -> geht auf eigene Tabelle mit shops, die bestehen aus Name & Icon)
+* created (datetime)
+* changed (datetime)
+
+Nähere Informationen zu den Details der Daten-Struktur später.
+
+Jedes einzelne Item hat ein eigenes Cover-Bild, was in einem seperaten Verzeichnis gespeichert wird (von außen nicht direkt zugänglich). Es muss liegen in einem eigenen Verzeichnis mit den Unterverzeichnissen /[ITEMTYPE]/[ITEM_ID]_[NUM].jpg wobei die NUM mit 0 anfängt, aber man mehrere Bilder hinterlegen kann.
+
+Wir haben verschiedene Seiten. Die Hauptseite ist einfach nur eine Übersicht über die Typen von CollectableItems (Filme, Animes, Serien, ...). Jeder Typ hat seine eigene Übersichtsseite, wo alle Items auf einer Seite angezeigt werden (aber mit Limit/Offset Paginierung), die dem User zugeordnet sind. Hier muss es verschiedene Filter geben, wobei ganz groß ein Inputfeld vorliegt, in welches man etwas eintippen kann und es wird nach allem durchsucht (da drunter dann checkboxen für "nur suchen in: [] title, [] actor, ..." und wenn nichts ausgewählt ist wird nach allen Elementen durchsucht). Auch die Sortierung kann man einstellen nach "Titel (asc/desc)", "Year (asc/desc)", ...
+Auch braucht es hier einen [+] Button, um ein Element hinzuzufügen - hier im Popup gibt es dann ebenfalls eine Suchmaske und es wird nach bestehenden Elementen in der gesamten Datenbank durchsucht.
+
+Klickt man auf ein Element, kommt man auf die Detail-Seite. Hier werden alle Details angezeigt zu dem Element mit dem Cover und allen eventuelligen anderen Covers. Hier kann der User auswählen, ob er das Element sich wünscht, gekauft hat, unterwegs ist, etc. (status), um eine Verknüpfung herzustellen.
+
+Weitere Unterseiten, die von den einzelnen Typen ausgehen:
+Actor-Liste, Studio-Liste, Director-Liste, Artist-Liste, ...
+Die zeigen dann auch eine Filterbare (aber weniger Filter) Liste der jeweiligen Untertabelle an. Bei den Actors kann man dann auch noch ein Bild hinzufügen gegebenenfalls.
+
+Weitere Unterseite "Todo/Shoppinglist"
+Gibt es bei einem item einen volume_count und steht das Item nicht auf "finished" oder "aborded", taucht es in der Todo-Liste auf. Hier gibt es dann auch noch Gruppierungen und bestimmte Eigenenschaften.
+
+Wie kommen ganz neue Elemente in die Datenbank?
+Da Crawling teilweise zu schwierig ist (wegen Cloudflare), wird es Browser-Plugins geben, die einfach den aktuellen Inhalt einer HTMl-Webseite (Film-Seite, Anime-Seite, Serien-Seite, etc.) auf eine Target-Seite kopiert. Dort wird das HTML erst einmal in ein Form gepackt mit Auswahlmöglichkeit für den Typ des Inhalts (Game, Film, Anime, etc.) und beim absenden wird es erst entsprechend geparst.
+Dafür brauchen wir einen HTMl-Parser, der nach bestimmten Mustern Inhalte rausparst. Hier wäre ggf. eine eigene Klasse gut, die wiederum für jeden Typ Unterklassen haben GameParser, FilmParser, etc., die wiederum von der Hauptklasse erben. Hier soll dann ein Fehler ausgegeben werden, wenn Dinge nicht gefunden werden (z.B. der Titel) oder nicht geparst werden kann. Wenn Titel und Jahr gefunden wurde, wird in der Datenbank erst einmal geschaut, ob es das nicht schon gibt und dann wird nachgefragt, ob der Titel A) Trotzdem neu angelegt werden soll, B) Überschrieben werden soll oder C) Abbrechen
+
+Gestartet werden muss zuerst mit den Parsern.
